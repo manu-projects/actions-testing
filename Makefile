@@ -1,8 +1,14 @@
+.DEFAULT_GOAL=help
+
 STDERR=2
 NULL_DEVICE=/dev/null
 
 GIT_STATUS=$(shell git status --porcelain)
 GIT_REMOTE_EXISTS=$(shell git remote | grep -w $(REPOSITORY_NAME) $(STDERR)>$(NULL_DEVICE))
+
+##@ Utilidades
+h help: ## Mostrar menú de ayuda
+	@awk 'BEGIN {FS = ":.*##"; printf "\nOpciones para usar:\n  make \033[36m\033[0m\n"} /^[$$()% 0-9a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 git-log-graph:
 	git log --graph --abbrev-commit --decorate --oneline
@@ -44,7 +50,8 @@ GIT_REMOTOS_PENDIENTES_CANTIDAD=$(GIT_REMOTOS_PENDIENTES) \
 # 2. Chequea si coincide la lista de repositorios remotos locales en la máquina (git remote) con la lista de repositorios.cfg
 # 3. Si falta alguno entonces hace un llamado recursivo al mismo Makefile para agregar los que falten (invocando el target git-subtree-add)
 
-git-update-subtree:
+##@ Acciones
+git-update-subtree: ## al agregar por primera vez un repositorio remoto
 ifneq ($(GIT_REMOTOS_PENDIENTES_CANTIDAD), 0)
 	$(info existen remotos pendientes por agregar al git remote)
 	@$(GIT_REMOTOS_PENDIENTES) | $(GIT_ADD_REMOTE)
@@ -93,7 +100,7 @@ endif
 #
 # Repositorio que contiene los nodos del Subtree:
 # - si su workflow escucha un evento X => éste es el primer target que invoca, para traerse los cambios (pull)
-git-subtree-pull: check-remote-status
+git-subtree-pull: check-remote-status ##  (se invoca desde github actions)
 	git subtree pull --prefix=$(REPOSITORY_NAME) $(REPOSITORY_URL) master --squash
 
 check-remote-status:
@@ -107,7 +114,7 @@ check-remote-status:
 #
 # Repositorio que contiene los nodos del Subtree:
 #  - hace (push) subiendo los cambios al repositorio remoto (github.com)
-upload-changes-to-remote:
+upload-changes-to-remote: ## (se invoca desde github actions)
 	git push origin master
 
 .PHONY: git-log-graph git-update-subtree git-subtree-add check-repository-modifications add-remote-repository git-subtree-pull upload-changes-to-remote
